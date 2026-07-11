@@ -1,53 +1,94 @@
-export default async function handler(req, res) {
-
-  if (req.method !== "POST") {
-    return res.status(405).json({
-      error: "Method not allowed"
-    });
-  }
+const textInput = document.getElementById("textInput");
+const output = document.getElementById("output");
 
 
-  try {
+async function checkGrammar() {
 
-    const { text } = req.body;
+    const text = textInput.value.trim();
 
 
-    if (!text) {
-      return res.status(400).json({
-        error: "Text is required"
-      });
+    if (text === "") {
+        alert("Please enter some text first.");
+        return;
     }
 
 
-    const response = await fetch(
-      "https://api.languagetool.org/v2/check",
-      {
-        method: "POST",
+    output.innerHTML = "⏳ Checking grammar...";
 
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded"
-        },
 
-        body: new URLSearchParams({
-          text: text,
-          language: "en-US"
-        })
-      }
+    try {
+
+        const response = await fetch(
+            "https://azhar-grammar-api.vercel.app/api/grammar",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    text: text
+                })
+            }
+        );
+
+
+        const data = await response.json();
+
+
+        if (data.matches && data.matches.length > 0) {
+
+            let correctedText = text;
+
+
+            data.matches.reverse().forEach(match => {
+
+                const replacement = match.replacements[0]?.value;
+
+                if (replacement) {
+
+                    correctedText =
+                    correctedText.substring(0, match.offset) +
+                    replacement +
+                    correctedText.substring(
+                        match.offset + match.length
+                    );
+
+                }
+
+            });
+
+
+            output.innerText = correctedText;
+
+        } else {
+
+            output.innerText =
+            "✅ No grammar mistakes found!\n\n" + text;
+
+        }
+
+
+    } catch(error) {
+
+        output.innerText =
+        "❌ Error connecting to Grammar API.";
+
+        console.log(error);
+
+    }
+
+}
+
+
+
+function copyText(){
+
+    navigator.clipboard.writeText(
+        output.innerText
     );
 
-
-    const data = await response.json();
-
-
-    return res.status(200).json(data);
-
-
-  } catch (error) {
-
-    return res.status(500).json({
-      error: "Server error"
-    });
-
-  }
+    alert("✅ Result copied!");
 
 }
